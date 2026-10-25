@@ -95,3 +95,29 @@ def generate(model, idx, max_new_tokens, context_size, temperature=0.0, top_k=No
             next_id = logits.argmax(-1, keepdim=True)
         idx = torch.cat([idx, next_id], dim=1)
     return idx
+
+
+def load_gpt2_weights(model, sd):
+    """P0-05: copy OpenAI GPT-2 weights (Hugging Face safetensors dict) into GPTModel.
+    HF stores Linear weights as (in, out) ('Conv1D'), so they are transposed; c_attn packs Q,K,V."""
+    sd = {k.removeprefix('transformer.'): v for k, v in sd.items()}
+    def put(param, value):
+        assert param.shape == value.shape, f'shape mismatch {tuple(param.shape)} vs {tuple(value.shape)}'
+        with torch.no_grad():
+            param.copy_(value)
+    put(model.tok_emb.weight, sd['wte.weight'])
+    put(model.pos_emb.weight, sd['wpe.weight'])
+    for i, b in enumerate(model.blocks):
+        p = f'h.{i}.'
+        q, k, v = sd[p + 'attn.c_attn.weight'].T.chunk(3, dim=0)
+        qb, kb, vb = sd[p + 'attn.c_attn.bias'].chunk(3)
+        for lin, w, bias in [(b.att.W_q, q, qb), (b.att.W_k, k, kb), (b.att.W_v, v, vb)]:
+            put(lin.weight, w); put(lin.bias, bias)
+        put(b.att.out_proj.weight, sd[p + 'attn.c_proj.weight'].T); put(b.att.out_proj.bias, sd[p + 'attn.c_proj.bias'])
+        put(b.ff.net[0].weight, sd[p + 'mlp.c_fc.weight'].T);     put(b.ff.net[0].bias, sd[p + 'mlp.c_fc.bias'])
+        put(b.ff.net[2].weight, sd[p + 'mlp.c_proj.weight'].T);   put(b.ff.net[2].bias, sd[p + 'mlp.c_proj.bias'])
+        put(b.norm1.scale, sd[p + 'ln_1.weight']); put(b.norm1.shift, sd[p + 'ln_1.bias'])
+        put(b.norm2.scale, sd[p + 'ln_2.weight']); put(b.norm2.shift, sd[p + 'ln_2.bias'])
+    put(model.final_norm.scale, sd['ln_f.weight']); put(model.final_norm.shift, sd['ln_f.bias'])
+    model.out_head.weight = model.tok_emb.weight   # GPT-2 ties input and output embeddings
+    return model
