@@ -15,3 +15,6 @@ Sampling: logits / T, keep top-k, softmax, multinomial.
 (fill in after running: epoch where val loss bottoms out, best sample)
 ## Questions / next
 P0-05 load real GPT-2 weights into GPTModel.
+
+## Update 2026-10-28
+Training now logs train/val loss per epoch to Trackio (`trackio.show()` opens the chart). Checkpoint saves to /kaggle/working on Kaggle. 2-epoch reference run: train 6.502 -> 6.108, val 6.736 -> 6.665.

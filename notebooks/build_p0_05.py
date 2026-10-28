@@ -4,6 +4,8 @@ md=lambda s:C.append(nbf.v4.new_markdown_cell(s)); code=lambda s:C.append(nbf.v4
 md("""# P0-05 · Load real GPT-2 weights into your own model
 **Build Your Own AI · Phase 0, step 5 (the last step of Phase 0).** About 3 min on CPU, including a 548 MB download. No GPU needed.
 
+Runs on **Colab or Kaggle** (on Kaggle, turn on Internet in the notebook settings; it needs a phone-verified account).
+
 In P0-04 you trained a 16M model on one short story (about 5,000 tokens). It learned commas and a few words.
 OpenAI trained **GPT-2 (124M)** with *the exact same architecture you built*, on about 40 GB of web text (WebText).
 Here you pour OpenAI's trained numbers into **your** `GPTModel` class. If your code is right, it will write fluent English.
@@ -39,7 +41,7 @@ try:
     os.makedirs('/content/drive/MyDrive/train-your-own-model', exist_ok=True)
     CACHE = '/content/drive/MyDrive/train-your-own-model/gpt2.safetensors'
 except ImportError:
-    pass   # local run: cache next to the notebook
+    if os.path.isdir('/kaggle/working'): CACHE = '/kaggle/working/gpt2.safetensors'
 if not os.path.exists(CACHE):
     print('downloading 548 MB ...'); urllib.request.urlretrieve(URL, CACHE)
 sd = load_file(CACHE)
@@ -120,11 +122,11 @@ def val_loss(m, ctx):
     return tot / n
 g = val_loss(model, 128)
 print(f'GPT-2 124M   val loss {g:.2f} | perplexity {math.exp(g):,.0f}')
-ck_paths = ['/content/drive/MyDrive/train-your-own-model/p0_04_tiny_gpt.pt', 'p0_04_tiny_gpt.pt']
+ck_paths = ['/content/drive/MyDrive/train-your-own-model/p0_04_tiny_gpt.pt', '/kaggle/working/p0_04_tiny_gpt.pt', 'p0_04_tiny_gpt.pt']
 ck = next((p for p in ck_paths if os.path.exists(p)), None)
 if ck:
     c = torch.load(ck, map_location='cpu')
-    tiny = GPTModel(c['cfg'], tie_weights=True); tiny.load_state_dict(c['model'])
+    tiny = GPTModel(c['config'], tie_weights=True); tiny.load_state_dict(c['model'])
     t = val_loss(tiny, 128)
     print(f'your P0-04   val loss {t:.2f} | perplexity {math.exp(t):,.0f}')
 else:

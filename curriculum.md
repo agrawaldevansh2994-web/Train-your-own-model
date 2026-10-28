@@ -18,3 +18,11 @@ Total estimate (see costs.md): lean path ~₹700-2,300 (~$8-24); full path with 
 - [ ] P3 dataset  - [ ] P3 QLoRA  - [ ] P3 GGUF + Ollama
 - [ ] P4 tools  - [ ] P4 API  - [ ] P4 deploy
 Open: which phase to start (recommended P0 on laptop); license of LLMs-from-scratch (NOASSERTION, check LICENSE file before reusing code publicly).
+
+## Tooling for Phase 1+ (checked 2026-10-28)
+- Trackio: free, W&B-compatible loss tracking (added to P0-04; used for all training runs).
+- Kaggle CLI/MCP and the official Colab CLI (`colab run --gpu T4 train.py`): launch runs on free GPU pools from the terminal.
+- Hugging Face MCP server + huggingface/skills plugin: search datasets/models, push checkpoints. Read-only token unless pushing.
+- Context7: current TRL/Unsloth docs for SFT/DPO/GRPO.
+- lm-evaluation-harness: compare minimind vs nanochat vs fine-tunes.
+- Avoid: GitHub Models (retired 30 Jul 2026), Lightning AI (offline since 16 Oct 2026), LiteLLM 1.107.0 / 1.82.7-8 (malicious releases).

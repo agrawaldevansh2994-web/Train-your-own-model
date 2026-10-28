@@ -4,6 +4,8 @@ md=lambda s:C.append(nbf.v4.new_markdown_cell(s)); code=lambda s:C.append(nbf.v4
 md("""# P0-04 · Pretraining: teach your GPT to write
 **Build Your Own AI · Phase 0, step 4.** CPU about 5 min, Colab GPU about 1 min.
 
+Runs on **Colab or Kaggle** (on Kaggle, turn on Internet in the notebook settings; it needs a phone-verified account).
+
 Until now the model was a random brain (loss 11, gibberish). **Pretraining** is just this loop, repeated:
 1. show the model text, ask it to predict every next token,
 2. measure how wrong it was (**cross-entropy loss**),
@@ -19,10 +21,10 @@ for path in ['src/mygpt.py']:
         urllib.request.urlretrieve(REPO + path, os.path.basename(path))
 import sys; sys.path += ['.', '../src']
 try:
-    import tiktoken
+    import tiktoken, trackio
 except ImportError:
-    !pip -q install tiktoken
-    import tiktoken
+    !pip -q install tiktoken trackio
+    import tiktoken, trackio
 import torch, torch.nn as nn, torch.nn.functional as F, math, time
 from mygpt import GPTModel, generate
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -95,6 +97,8 @@ code("""def sample(prompt='Every effort moves you', n=25, **kw):
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=0.1)
 EPOCHS = 12
 history = {'step': [], 'train': [], 'val': []}
+# Trackio: free, local experiment tracker (same API as Weights & Biases). Logs every epoch to a small local database.
+trackio.init(project='train-your-own-model', name='p0-04-tiny-gpt', config={**CFG, 'lr': 1e-3, 'epochs': EPOCHS, 'batch_size': 2})
 step, t0 = 0, time.time()
 for epoch in range(EPOCHS):
     for xb, yb in train_dl:
@@ -106,9 +110,12 @@ for epoch in range(EPOCHS):
         step += 1
     tr, va = avg_loss(train_dl), avg_loss(val_dl)
     history['step'].append(step); history['train'].append(tr); history['val'].append(va)
+    trackio.log({'train_loss': tr, 'val_loss': va, 'epoch': epoch + 1}, step=step)
     print(f'epoch {epoch+1:2d} | step {step:3d} | train {tr:.3f} | val {va:.3f} | {time.time()-t0:4.0f}s')
     if epoch in (0, 3, EPOCHS - 1):
-        print('   ->', repr(sample()))""")
+        print('   ->', repr(sample()))
+trackio.finish()""")
+md("""**Trackio dashboard (optional).** Run `trackio.show()` in a new cell to open the interactive loss chart. Every run you do (different lr, more epochs) appears as a separate line, so you can compare experiments. That's how you'll track the longer Phase 1 runs.""")
 md("## 4. Read the curve")
 code("""import matplotlib.pyplot as plt
 plt.figure(figsize=(6, 3.5))
@@ -144,7 +151,8 @@ try:
     drive.mount('/content/drive'); os.makedirs('/content/drive/MyDrive/train-your-own-model', exist_ok=True)
     SAVE = '/content/drive/MyDrive/train-your-own-model/p0_04_tiny_gpt.pt'
 except ImportError:
-    pass
+    if os.path.isdir('/kaggle/working'):   # Kaggle: download it from the notebook's Output tab
+        SAVE = '/kaggle/working/p0_04_tiny_gpt.pt'
 torch.save(ckpt, SAVE)
 print(f'saved {SAVE} ({os.path.getsize(SAVE)/1e6:.0f} MB; ~2/3 of that is AdamW state, weights alone are ~65 MB)')
 
