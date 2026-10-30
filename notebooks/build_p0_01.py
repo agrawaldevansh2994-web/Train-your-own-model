@@ -79,7 +79,7 @@ for k in range(num_merges):
     if k < 15 or k % 50 == 0:
         print(f'merge {k:3d}: {vocab[pair[0]]!r} + {vocab[pair[1]]!r} -> {vocab[new_id]!r}  (seen {counts[pair]}x)')
 print('end: tokens =', len(ids), '| compression', round(len(text.encode()) / len(ids), 2), 'bytes per token')""")
-md("Watch the merges: first spaces and common letter pairs (`e `, `th`), then whole words (` the`, ` and`). Nobody told it English; it found the structure from counts.")
+md("Watch the merges: first letters glued to spaces and common pairs (`e `, ` t`, `in`), then longer chunks and whole phrases (`hat `, `in the `). Nobody told it English; it found the structure from counts.")
 code("""def bpe_encode(s):
     ids = list(s.encode('utf-8'))
     while len(ids) >= 2:
@@ -100,7 +100,7 @@ print('round trip ok:', bpe_decode(ids) == s)   # no <|unk|> ever, even Hindi an
 md("The `�` marks are not errors: each Devanagari letter is 3 bytes and the emoji is 4, and our tiny tokenizer never learned to merge them, so you see single raw bytes. Decoded together they round-trip perfectly.")
 md("## 4. Compare with the real GPT-2 tokenizer\nSame algorithm, trained on ~40 GB of web text with 50,000 merges.")
 code("""gpt2 = tiktoken.get_encoding('gpt2')
-for name, enc in [('ours (556 vocab)', bpe_encode), ('gpt2 (50257 vocab)', gpt2.encode)]:
+for name, enc in [(f'ours ({256 + num_merges} vocab)', bpe_encode), ('gpt2 (50257 vocab)', gpt2.encode)]:
     t = enc(text)
     print(f'{name:20s} tokens: {len(t):6d}  bytes/token: {len(text.encode())/len(t):.2f}')
 print([gpt2.decode([i]) for i in gpt2.encode('Hello, do you like tea? नमस्ते')])""")

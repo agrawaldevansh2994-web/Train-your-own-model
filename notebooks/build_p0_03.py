@@ -12,8 +12,13 @@ x ─┬─ LayerNorm ─ MultiHeadAttention ─ Dropout ─(+)─┬─ LayerNo
    └────────────── shortcut ──────────────────────┘ └──────────────── shortcut ─────────────────┘
 ```
 We build each piece, check what it does with numbers, then assemble.""")
-code("""!pip -q install tiktoken
-import torch, torch.nn as nn, math, tiktoken
+code("""import sys, subprocess
+try:
+    import tiktoken
+except ImportError:
+    subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'tiktoken'])
+    import tiktoken
+import torch, torch.nn as nn, math
 torch.manual_seed(123)
 print('torch', torch.__version__)""")
 md("""## 0. Config
@@ -64,8 +69,9 @@ code("""class LayerNorm(nn.Module):
 x = torch.randn(2, 5) * 4 + 3
 ln = LayerNorm(5)
 y = ln(x)
-print('before: mean', x.mean(-1).round(decimals=2).tolist(), ' var', x.var(-1, unbiased=False).round(decimals=2).tolist())
-print('after : mean', y.mean(-1).round(decimals=4).tolist(), ' var', y.var(-1, unbiased=False).round(decimals=4).tolist())
+r = lambda t, d: [round(v, d) for v in t.tolist()]
+print('before: mean', r(x.mean(-1), 2), ' var', r(x.var(-1, unbiased=False), 2))
+print('after : mean', r(y.mean(-1), 4), ' var', r(y.var(-1, unbiased=False), 4))
 print('matches nn.LayerNorm:', torch.allclose(y, nn.LayerNorm(5)(x), atol=1e-5))""")
 md("""## 2. GELU and the feed-forward network
 Attention mixes information *between* tokens. The **feed-forward network (FFN)** then thinks about each token *on its own*: expand 768 → 3072, apply a nonlinearity, shrink back to 768. Most of a GPT's parameters live here.
@@ -79,7 +85,7 @@ code("""class GELU(nn.Module):
 xs = torch.tensor([-3., -1., -0.5, 0., 0.5, 1., 3.])
 print('x    ', xs.tolist())
 print('ReLU ', torch.relu(xs).tolist())
-print('GELU ', GELU()(xs).round(decimals=3).tolist())
+print('GELU ', [round(v, 3) for v in GELU()(xs).tolist()])
 
 class FeedForward(nn.Module):
     def __init__(self, cfg):

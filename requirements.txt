@@ -1,0 +1,13 @@
+# Phase 0, laptop CPU. Install torch first from the CPU index:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r requirements.txt
+torch
+tiktoken
+numpy
+matplotlib
+safetensors
+transformers
+trackio
+jupyter
+ipykernel
+nbclient

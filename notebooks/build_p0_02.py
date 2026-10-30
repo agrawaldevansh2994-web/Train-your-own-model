@@ -141,7 +141,7 @@ theirs = F.scaled_dot_product_attention(Q, K, V, is_causal=True)
 print('matches F.scaled_dot_product_attention:', torch.allclose(ours, theirs, atol=1e-5))""")
 md("""## Your turn
 1. In section 1, change the query to `x[4]` ('one'). Which word does it attend to most? Why (look at the vectors)?
-2. Remove the `/ sqrt(d)` in the `SelfAttention` class and use d_out=512. Print `A.max()`. What happened?
+2. In the "Why scale?" cell, try `d = 16`, `512` and `4096`. How does `softmax raw max` change, and why does the scaled one stay put? What would a near one-hot softmax do to the gradients?
 3. Delete the mask line in `MultiHeadAttention`. Why would training then look great but generation fail?
 4. Count: for context T=1024, the attention matrix per head has how many entries? What happens at T=128k? (This is why long context is expensive.)
 

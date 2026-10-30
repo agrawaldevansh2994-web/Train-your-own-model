@@ -8,3 +8,5 @@ data/private/
 *.pt
 *.bin
 checkpoints/
+.venv/
+_old_local_backup/

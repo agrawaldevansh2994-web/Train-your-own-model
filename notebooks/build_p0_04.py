@@ -20,10 +20,11 @@ for path in ['src/mygpt.py']:
     if not os.path.exists(os.path.basename(path)) and not os.path.exists('../' + path):
         urllib.request.urlretrieve(REPO + path, os.path.basename(path))
 import sys; sys.path += ['.', '../src']
+import subprocess
 try:
     import tiktoken, trackio
 except ImportError:
-    !pip -q install tiktoken trackio
+    subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'tiktoken', 'trackio'])
     import tiktoken, trackio
 import torch, torch.nn as nn, torch.nn.functional as F, math, time
 from mygpt import GPTModel, generate
@@ -125,7 +126,7 @@ plt.xlabel('step'); plt.ylabel('cross-entropy loss'); plt.legend(); plt.title('Y
 plt.grid(alpha=.3); plt.tight_layout(); plt.show()
 best = min(range(len(history['val'])), key=lambda i: history['val'][i])
 print(f'best val loss {history["val"][best]:.3f} at epoch {best+1}; final train {history["train"][-1]:.3f}')""")
-md("""What you should see: train loss drops steadily (toward ~1 or below), val loss drops for a few epochs, then **flattens or rises**. That gap is **overfitting**: with only ~4,600 training tokens, the model memorises the story instead of learning English. Real pretraining fixes this with more data, not more epochs: nanochat uses billions of tokens. Same loop, more text.""")
+md("""What you should see: train loss keeps dropping (to about 5 after 12 epochs), while val loss bottoms out around 6.4 after ~8 epochs and then **flattens or creeps back up**. That widening gap is **overfitting**: with only ~4,600 training tokens, the model memorises the story instead of learning English. Real pretraining fixes this with more data, not more epochs: nanochat uses billions of tokens. Same loop, more text.""")
 md("""## 5. Decoding: temperature and top-k
 Greedy (always the top token) is deterministic and repetitive. Instead we **sample** from the probabilities, with two dials:
 - **Temperature** divides logits before softmax. T<1 sharpens (safer), T>1 flattens (wilder).
