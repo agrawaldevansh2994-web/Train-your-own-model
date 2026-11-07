@@ -12,8 +12,8 @@ Started 2026-10-23. Status: [ ] to do, [~] in progress, [x] done. Hardware: HP L
 Total estimate (see costs.md): lean path ~₹700-2,300 (~$8-24); full path with 8xH100 speedrun ~₹10,000-13,500 (~$105-140). Excludes optional hosting.
 
 ## Status
-- [x] P0-01 tokenizer  - [x] P0-02 attention  - [~] P0-03 GPT block + generate  - [~] P0-04 pretrain tiny GPT  - [~] P0-05 load GPT-2 weights
-- [ ] P1 setup + tokenizer  - [ ] P1 pretrain  - [ ] P1 SFT  - [ ] P1 LoRA  - [ ] P1 DPO/RL
+- [x] P0-01 tokenizer  - [x] P0-02 attention  - [x] P0-03 GPT block + generate  - [x] P0-04 pretrain tiny GPT (+ P0-04b more data)  - [x] P0-05 load GPT-2 weights
+- [ ] P1 setup + tokenizer (next, see HANDOFF.md)  - [ ] P1 pretrain  - [ ] P1 SFT  - [ ] P1 LoRA  - [ ] P1 DPO/RL
 - [ ] P2 choose mini vs full  - [ ] P2 run  - [ ] P2 evals
 - [ ] P3 dataset  - [ ] P3 QLoRA  - [ ] P3 GGUF + Ollama
 - [ ] P4 tools  - [ ] P4 API  - [ ] P4 deploy

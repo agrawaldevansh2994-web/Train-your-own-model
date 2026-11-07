@@ -10,3 +10,4 @@ data/private/
 checkpoints/
 .venv/
 _old_local_backup/
+explainers/
