@@ -89,7 +89,7 @@ code("""def train(name, data):
     scaler = torch.amp.GradScaler(device, enabled=GPU)   # fp16 on the T4 for speed
     Xtr, Ytr = windows(data, 256 if GPU else 24)
     h = {'step': [], 'train': [], 'val': []}
-    trackio.init(project='train-your-own-model', name=f'p0-04b-{len(data) // 1000}k', config={**CFG, 'train_tokens': len(data), 'steps': STEPS, 'batch': BATCH, 'lr': LR})
+    trackio.init(project='train-your-own-model', name=f'p0-04b-{len(data) // 1000}k', embed=False, config={**CFG, 'train_tokens': len(data), 'steps': STEPS, 'batch': BATCH, 'lr': LR})
     t0 = time.time()
     for step in range(1, STEPS + 1):
         x, y = get_batch(data)
@@ -129,7 +129,7 @@ a2.bar([i + .2 for i in x], final, .4, color=colors, label='final validation los
 for i in x: a2.text(i + .2, final[i] + .08, f'gap {gaps[i]:.2f}', ha='center', fontsize=10)
 a2.set_xticks(list(x)); a2.set_xticklabels([n.split(' (')[0] + '\\n' + n.split('(')[1].rstrip(')') for n in names]); a2.set_ylim(0, max(final) + 1)
 a2.set_ylabel('validation loss (lower is better)', fontsize=12); a2.set_title('More data, lower validation loss', fontsize=13); a2.legend(fontsize=9, loc='lower right'); a2.grid(alpha=.3, axis='y')
-plt.tight_layout(); plt.show()
+plt.tight_layout(); plt.savefig('p0_04b_compare.png', dpi=150); plt.show()
 for n, b, f, g in zip(names, best, final, gaps):
     print(f'{n:22s} best val {b:.2f} | final val {f:.2f} | final gap {g:.2f} (unseen text {math.exp(g):.1f}x more surprising)')""")
 md("""**How to read it.** All three start the same way. Then:
