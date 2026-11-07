@@ -2,7 +2,7 @@ import nbformat as nbf
 nb=nbf.v4.new_notebook(); C=[]
 md=lambda s:C.append(nbf.v4.new_markdown_cell(s)); code=lambda s:C.append(nbf.v4.new_code_cell(s))
 md("""# P0-04 · Pretraining: teach your GPT to write
-**Build Your Own AI · Phase 0, step 4.** CPU about 5 min, Colab GPU about 1 min.
+**Build Your Own AI · Phase 0, step 4.** CPU about 3 min, Colab GPU under 1 min.
 
 Runs on **Colab or Kaggle** (on Kaggle, turn on Internet in the notebook settings; it needs a phone-verified account).
 
@@ -30,19 +30,19 @@ import torch, torch.nn as nn, torch.nn.functional as F, math, time
 from mygpt import GPTModel, generate
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('torch', torch.__version__, '| device:', device)""")
-md("## 1. Data: the same story from P0-01, split 90/10")
+md("## 1. Data: the same story from P0-01, split 80/20")
 code("""url = 'https://raw.githubusercontent.com/rasbt/LLMs-from-scratch/main/ch02/01_main-chapter-code/the-verdict.txt'
 if not os.path.exists('the-verdict.txt'):
     urllib.request.urlretrieve(url, 'the-verdict.txt')
 text = open('the-verdict.txt', encoding='utf-8').read()
 tok = tiktoken.get_encoding('gpt2')
 ids = tok.encode(text)
-split = int(0.9 * len(ids))
+split = int(0.8 * len(ids))
 train_ids, val_ids = ids[:split], ids[split:]
 print(f'{len(text):,} chars -> {len(ids):,} tokens | train {len(train_ids):,} | val {len(val_ids):,}')""")
 md("""Sliding-window dataset from P0-01: input = a chunk of tokens, target = the same chunk shifted one to the right. Every position is its own prediction task.
 
-**Validation** text is never trained on. If train loss falls but val loss rises, the model is memorising, not learning.""")
+**Validation** text is never trained on. If train loss falls but val loss rises, the model is memorising, not learning. We hold out 20% (about 1,000 tokens, 8 windows of 128) so the validation curve is steady enough to read; with a 10% hold-out a single odd window moved it too much.""")
 code("""class TokenDataset(torch.utils.data.Dataset):
     def __init__(self, ids, ctx, stride):
         self.x, self.y = [], []
@@ -96,7 +96,7 @@ code("""def sample(prompt='Every effort moves you', n=25, **kw):
     return tok.decode(out[0].tolist()).replace('\\n', ' ')
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=0.1)
-EPOCHS = 12
+EPOCHS = 20
 history = {'step': [], 'train': [], 'val': []}
 # Trackio: free, local experiment tracker (same API as Weights & Biases). Logs every epoch to a small local database.
 trackio.init(project='train-your-own-model', name='p0-04-tiny-gpt', config={**CFG, 'lr': 1e-3, 'epochs': EPOCHS, 'batch_size': 2})
@@ -119,15 +119,81 @@ trackio.finish()""")
 md("""**Trackio dashboard (optional).** Run `trackio.show()` in a new cell to open the interactive loss chart. Every run you do (different lr, more epochs) appears as a separate line, so you can compare experiments. That's how you'll track the longer Phase 1 runs.""")
 md("## 4. Read the curve")
 code("""import matplotlib.pyplot as plt
-plt.figure(figsize=(6, 3.5))
-plt.plot(history['step'], history['train'], 'o-', label='train')
-plt.plot(history['step'], history['val'], 's--', label='validation')
-plt.xlabel('step'); plt.ylabel('cross-entropy loss'); plt.legend(); plt.title('Your first pretraining run')
-plt.grid(alpha=.3); plt.tight_layout(); plt.show()
-best = min(range(len(history['val'])), key=lambda i: history['val'][i])
-print(f'best val loss {history["val"][best]:.3f} at epoch {best+1}; final train {history["train"][-1]:.3f}')""")
-md("""What you should see: train loss keeps dropping (to about 5 after 12 epochs), while val loss bottoms out around 6.4 after ~8 epochs and then **flattens or creeps back up**. That widening gap is **overfitting**: with only ~4,600 training tokens, the model memorises the story instead of learning English. Real pretraining fixes this with more data, not more epochs: nanochat uses billions of tokens. Same loop, more text.""")
-md("""## 5. Decoding: temperature and top-k
+ep = list(range(1, EPOCHS + 1)); tr, va = history['train'], history['val']
+best = min(range(EPOCHS), key=lambda i: va[i])
+fig, ax = plt.subplots(figsize=(11, 5.5))
+ax.plot(ep, tr, 'o-', lw=2.5, ms=6, label='train loss (text it practises on)')
+ax.plot(ep, va, 's--', lw=2.5, ms=6, label='validation loss (text it never trains on)')
+ax.fill_between(ep, tr, va, color='tab:red', alpha=.10, label='gap = how much it memorised')
+ax.axvline(best + 1, color='gray', ls=':', lw=1.5)
+ax.annotate(f'best val {va[best]:.2f}\\nstop here (epoch {best + 1})', (best + 1, va[best]), xytext=(best + 2.5, va[best] + 1.6), arrowprops=dict(arrowstyle='->'), fontsize=11)
+ax.axhline(math.log(50257), color='gray', ls='--', lw=1)
+ax.text(1, math.log(50257) + .12, 'random guessing = ln(50257) = 10.82', fontsize=10, color='gray')
+ax.annotate(f'final gap {va[-1] - tr[-1]:.2f}', (EPOCHS, (va[-1] + tr[-1]) / 2), xytext=(-85, 0), textcoords='offset points', fontsize=11, color='tab:red')
+ax.set_ylim(min(tr) - .5, math.log(50257) + .8); ax.set_xticks(ep)
+ax.set_xlabel('epoch (one pass over the training text)', fontsize=12); ax.set_ylabel('cross-entropy loss', fontsize=12)
+ax.set_title('Your first pretraining run', fontsize=14); ax.legend(fontsize=11, loc='lower left'); ax.grid(alpha=.3)
+plt.tight_layout(); plt.show()
+print(f'best val loss {va[best]:.3f} at epoch {best+1} | final train {tr[-1]:.3f}, final val {va[-1]:.3f}, gap {va[-1] - tr[-1]:.2f}')
+print(f'perplexity: train {math.exp(tr[-1]):,.0f}, val {math.exp(va[-1]):,.0f} -> unseen text is {math.exp(va[-1] - tr[-1]):.0f}x more surprising')""")
+md("""What you should see: train loss keeps dropping (to about 3.5 after 20 epochs), while val loss bottoms out around 7 after ~8 epochs and then **creeps back up**. The red gap is the model memorising the story instead of learning English: **overfitting**. With only ~4,100 training tokens the model can't help it. Real pretraining fixes this with more data, not more epochs: nanochat uses billions of tokens. Same loop, more text.
+
+**Reading the gap.** Loss is in nats, so `e^gap` is how many times more surprised the model is by text it hasn't seen. A gap of 0.3 is about 1.4x, a gap of 1.4 is about 4x, a gap of 4 is about 50x. The size matters less than the trend: a gap that keeps widening while val loss rises means memorising.""")
+md("""## 5. Underfitting, a good fit, and overfitting side by side
+One curve can only show one situation, so we train two more small models on the same text and put all three next to each other. The three plots share the same loss axis, so you can compare heights, not just shapes.
+- **Underfit**: too small and learning too slowly. It hasn't fit even the training text.
+- **Best fit for this data**: a smaller model with heavy dropout (0.3). It can't memorise as easily, so validation keeps improving.
+- **Overfit**: your run above. Big enough to memorise the story.""")
+code("""def fit(cfg, lr, epochs):
+    torch.manual_seed(123)
+    m = GPTModel(cfg, tie_weights=True).to(device)
+    opt = torch.optim.AdamW(m.parameters(), lr=lr, weight_decay=0.1)
+    def avg(dl):
+        m.eval(); tot = 0.0
+        with torch.no_grad():
+            for xb, yb in dl: tot += F.cross_entropy(m(xb.to(device)).flatten(0, 1), yb.to(device).flatten()).item()
+        m.train(); return tot / len(dl)
+    h = {'train': [], 'val': []}
+    for _ in range(epochs):
+        for xb, yb in train_dl:
+            opt.zero_grad(); F.cross_entropy(m(xb.to(device)).flatten(0, 1), yb.to(device).flatten()).backward()
+            torch.nn.utils.clip_grad_norm_(m.parameters(), 1.0); opt.step()
+        h['train'].append(avg(train_dl)); h['val'].append(avg(val_dl))
+    return h, sum(p.numel() for p in m.parameters())
+
+UNDER = {**CFG, 'emb_dim': 64, 'n_heads': 2, 'n_layers': 1}
+GOOD = {**CFG, 'emb_dim': 128, 'n_heads': 4, 'n_layers': 2, 'drop_rate': 0.3}
+t1 = time.time()
+runs = [('Underfit', 'tiny model, lr 1e-4', *fit(UNDER, 1e-4, 12)),
+        ('Best fit for this data', 'small model, dropout 0.3, lr 5e-4', *fit(GOOD, 5e-4, 12)),
+        ('Overfit', 'your run above, 16M params', history, sum(p.numel() for p in model.parameters()))]
+print(f'trained 2 extra models in {time.time()-t1:.0f}s')
+fig, axes = plt.subplots(1, 3, figsize=(15, 4.8), sharey=True)
+for ax, (name, desc, h, n) in zip(axes, runs):
+    e = range(1, len(h['train']) + 1)
+    ax.plot(e, h['train'], 'o-', lw=2, label='train'); ax.plot(e, h['val'], 's--', lw=2, label='validation')
+    ax.fill_between(e, h['train'], h['val'], color='tab:red', alpha=.10)
+    ax.axhline(math.log(50257), color='gray', ls='--', lw=1)
+    gap = h['val'][-1] - h['train'][-1]
+    ax.set_title(f'{name}\\n{desc}', fontsize=12); ax.set_xlabel('epoch'); ax.grid(alpha=.3)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))
+    ax.text(.04, .05, f'final train {h["train"][-1]:.2f}\\nfinal val {h["val"][-1]:.2f}\\ngap {gap:.2f}', transform=ax.transAxes, fontsize=11, va='bottom', bbox=dict(boxstyle='round', fc='white', alpha=.85))
+axes[0].set_ylabel('cross-entropy loss'); axes[0].legend(loc='upper right')
+plt.tight_layout(); plt.show()
+for name, desc, h, n in runs:
+    gap = h['val'][-1] - h['train'][-1]; b = min(range(len(h['val'])), key=lambda i: h['val'][i])
+    print(f'{name:24s} {n/1e6:4.1f}M params | final train {h["train"][-1]:.2f} val {h["val"][-1]:.2f} | gap {gap:.2f} ({math.exp(gap):.1f}x) | best val {h["val"][b]:.2f} at epoch {b+1}')""")
+md("""| | Underfit | Good fit | Overfit |
+|---|---|---|---|
+| train loss | high, still falling | falls, then levels off | very low |
+| validation loss | high, close to train | falls and stays flat or still improving | bottoms out, then **rises** |
+| gap | small | moderate and steady | large and **growing** |
+| what to do | bigger model, higher learning rate, train longer | stop at the best epoch (early stopping) | more data, more dropout, smaller model, or stop early |
+
+**"Good" is relative here.** Even the best run keeps a gap of about 1.4, because 4,100 tokens is tiny. A truly healthy run has a gap near zero and needs far more text: GPT-2 saw about 40 GB and scores 3.7 on this same story in P0-05. What matters in the middle plot is that validation never turns upward, and its final value (about 6.8) beats the best the big model ever reached (about 7.0), even though the big model memorised far more of the training text. A bigger model fits the training set better and is not automatically better on new text.
+
+**Why validation is jumpy.** Even with 8 windows, one hard window moves the average, so wiggles of a few tenths are noise. Trust the overall direction.""")
+md("""## 6. Decoding: temperature and top-k
 Greedy (always the top token) is deterministic and repetitive. Instead we **sample** from the probabilities, with two dials:
 - **Temperature** divides logits before softmax. T<1 sharpens (safer), T>1 flattens (wilder).
 - **Top-k** keeps only the k likeliest tokens, so a weird token can't sneak in.""")
@@ -143,7 +209,7 @@ code("""torch.manual_seed(42)
 print('greedy        :', repr(sample()))
 print('T=0.7, top-k 20:', repr(sample(temperature=0.7, top_k=20)))
 print('T=1.5, top-k 50:', repr(sample(temperature=1.5, top_k=50)))""")
-md("""## 6. Save a checkpoint
+md("""## 7. Save a checkpoint
 A Colab session's disk is wiped when it ends. Save weights + optimizer state + config so you (or P0-05) can resume. In Colab, mount Drive to keep it.""")
 code("""ckpt = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), 'config': CFG, 'history': history}
 SAVE = 'p0_04_tiny_gpt.pt'
@@ -164,7 +230,7 @@ xb = torch.tensor([tok.encode('Every effort moves')], device=device)
 with torch.no_grad():
     print('reloaded model identical:', torch.allclose(model(xb), m2(xb), atol=1e-5))""")
 md("""## Your turn
-1. Train for 30 epochs. What happens to val loss? Write down the epoch you'd stop at (that's **early stopping**).
+1. Set `EPOCHS = 40` and rerun from section 3. Train loss heads toward 0 while val loss climbs past 9, close to the 10.8 of random guessing. Why does memorising make it *worse* than before on new text? (Hint: it is confidently wrong, and cross-entropy punishes that hard.) Write down the epoch you'd stop at: that's **early stopping**.
 2. Set `drop_rate=0.0` and retrain. Does the train/val gap grow or shrink?
 3. Try `lr=1e-2` and `lr=1e-4`. Which explodes, which crawls?
 4. Paste in a longer text you like (a public-domain book from Project Gutenberg) and retrain. Does val loss get better?

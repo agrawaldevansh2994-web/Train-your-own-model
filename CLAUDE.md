@@ -22,4 +22,4 @@ Devansh's learning repo: build an LLM end to end (tokenizer → pretraining → 
 ## Verifying changes
 "Looks right" isn't enough: execute the notebook (e.g. `jupyter nbconvert --to notebook --execute` or nbclient in a scratch copy, so downloads and checkpoints don't land in the repo) and read the real outputs before calling it done. P0-05's ground truth is a logit match against Hugging Face GPT-2 (max diff < 1e-3).
 
-Baseline from a full run in `.venv` on 2026-10-30 (torch 2.15.0+cpu, ~6.5 min total): P0-04 16.1M params, 12 epochs → train 4.82 / val 6.46 (best val 6.42 at epoch 8), checkpoint 193 MB; P0-05 HF logit diff 6.1e-05, GPT-2 val loss 3.74 vs P0-04 6.46.
+Baseline from a full run in `.venv` on 2026-11-07 (torch 2.15.0+cpu): P0-04 uses an 80/20 split (4,116 train / 1,029 val tokens), 16.1M params, 20 epochs, ~3 min → train 3.51 / val 7.47 (best val 6.97 at epoch 8, gap 3.96), plus two extra models for the underfit (8.62/8.93) and best-fit (5.45/6.81) comparison; checkpoint 193 MB. P0-05: HF logit diff 6.1e-05, GPT-2 val loss 3.74 vs P0-04 6.95 on the last 10% of the story.

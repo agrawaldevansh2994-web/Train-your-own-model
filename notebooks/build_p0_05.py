@@ -109,7 +109,7 @@ code("""def top5(text):
 for t in ['The capital of France is', 'I drank a cup of', 'def add(a, b):\\n    return', 'Mumbai is a city in']:
     top5(t)""")
 md("""## 6. Your P0-04 model vs GPT-2 on the same validation text
-Same story, same 10% validation split that P0-04 held out. Loss = average surprise per token (lower is better); perplexity = e^loss ≈ "how many tokens it's choosing between".""")
+Same story, scored on its last 10%. P0-04 held out the last 20% for validation, so your model never trained on this text either. Loss = average surprise per token (lower is better); perplexity = e^loss ≈ "how many tokens it's choosing between".""")
 code("""text = urllib.request.urlopen('https://raw.githubusercontent.com/rasbt/LLMs-from-scratch/main/ch02/01_main-chapter-code/the-verdict.txt').read().decode()
 ids = tok.encode(text); val = ids[int(0.9 * len(ids)):]
 def val_loss(m, ctx):
@@ -130,7 +130,7 @@ if ck:
     t = val_loss(tiny, 128)
     print(f'your P0-04   val loss {t:.2f} | perplexity {math.exp(t):,.0f}')
 else:
-    print('your P0-04 checkpoint not found (run P0-04 first); it typically ends around val loss 6.5-7')""")
+    print('your P0-04 checkpoint not found (run P0-04 first); it typically ends around val loss 7')""")
 md("""GPT-2 has **never seen this story** (it's validation text for both), yet it's far less surprised by it. The architecture is identical; the difference is about 8 million web pages of training. That's why Phase 1 and 2 are about data and compute, not new layers.""")
 md("## 7. Sampling with a real model")
 code("""torch.manual_seed(42)
