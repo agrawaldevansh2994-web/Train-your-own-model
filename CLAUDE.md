@@ -5,8 +5,10 @@ Devansh's learning repo: build an LLM end to end (tokenizer → pretraining → 
 **Next session: read `HANDOFF.md` first** (Phase 0 is done; it says how to start Phase 1).
 
 ## Layout
-- `notebooks/build_p0_XX.py` → generates `notebooks/P0-XX-*.ipynb`. **Edit the build script, never the .ipynb by hand**, then regenerate: `cd notebooks && python build_p0_XX.py`. Committed notebooks have no outputs.
+- `notebooks/build_pN_XX.py` → generates `notebooks/PN-XX-*.ipynb` (Phase 0 and 1). **Edit the build script, never the .ipynb by hand**, then regenerate: `cd notebooks && python build_p1_XX.py`. Committed notebooks have no outputs.
 - `src/mygpt.py`: the model from P0-01..P0-03 in one file (MultiHeadAttention, LayerNorm, GELU, FeedForward, TransformerBlock, GPTModel, generate, load_gpt2_weights). P0-04+ import it; on Colab/Kaggle they download it from the raw GitHub URL, locally they use `../src`. Changing it changes every later notebook: keep it in sync with the classes shown in P0-02/P0-03.
+- `src/mymind.py`: the modern model from P1-02 (RMSNorm, RoPE, SwiGLU, GQA, QK-norm, KV cache; MindModel, generate, load_minimind_weights, MIND_CONFIG_64M). Module names follow Llama/Qwen (q_proj, gate_proj...). Verified bit-exact against HF Qwen3ForCausalLM on jingyaogong/minimind-3. Phase 1 notebooks import it the same way as mygpt.
+- `tokenizers/*.json`: tokenizers trained in Phase 1 (small, committed; later notebooks download them). `notebooks/data/` holds downloaded datasets (gitignored).
 - `lab-notes/P0-XX-*.md`: one short note per step (what, math, observed). Devansh fills in observations after running.
 - `_old_local_backup/`: pre-clone local copies of the notebooks (gitignored).
 

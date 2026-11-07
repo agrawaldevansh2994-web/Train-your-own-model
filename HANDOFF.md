@@ -1,38 +1,28 @@
-# Handoff: start Phase 1 (minimind)
+# Handoff: Phase 1 in progress
 
-Written 2026-11-07 at the end of the Phase 0 session. Read `CLAUDE.md` and the brain index (`C:\Users\agraw\Harnessing brain\index.md`) first, then this file. Delete or rewrite this file once Phase 1 is underway.
+Updated 2026-11-07. Read `CLAUDE.md` and the brain index (`C:\Users\agraw\Harnessing brain\index.md`) first, then this file.
 
-## State
-- **Phase 0 is done.** P0-01 to P0-05 and the optional P0-04b are built, tested and pushed (last pushed commit `8a2759c`). Devansh ran all of them, P0-04b on a Colab T4.
-- `curriculum.md` still shows P0-03, P0-04 and P0-05 as `[~]`. Tick them to `[x]` (add P0-04b) and update the Phase 1 line when Phase 1 starts.
-- Key results, also in `CLAUDE.md`: GPT-2 loaded into our `GPTModel` with logit diff 6.1e-05. P0-04b best val 7.85 / 6.69 / 4.85 for 5k / 50k / 304k training tokens. The lesson is that the same model with more data fixes overfitting.
+## Decisions (made with Devansh on 2026-11-07)
+- **minimind's own data is mostly Chinese.** Samples: pretrain_t2t_mini 74-86% Chinese characters, 0% English rows; sft_t2t_mini 52-59%. So we do **not** run minimind's scripts. We use minimind (and Hark's notes) as the reference, build on our own code, and train on English data.
+- **Path: TinyStories first, then a scale-up run** (same pattern as P0-04 → P0-04b):
+  1. ~16M model on TinyStories with our 4,096-token tokenizer: laptop plus free Kaggle/Colab.
+  2. P1-05b: 64M (minimind-3 shape) on ~1.3B tokens of FineWeb-Edu with a new tokenizer trained on that text. **Guesses, not measured:** ~10-25 h on one T4 (2-3 Kaggle sessions with checkpoints), or ~1-2 h on a rented H100 (E2E spot ₹70/h, on demand ₹379/h). Devansh offered to rent a GPU if needed. Measure tokens/s on the first real run before choosing, and get his go first.
+  3. SFT on `HuggingFaceTB/smol-smoltalk` (Apache-2.0), DPO on the English half of minimind's dpo.jsonl (sampled from llamafactory/DPO-En-Zh-20k), a small GRPO toy with an automatic reward.
+- Hark's notes (pasted by Devansh), which we adopted: a modern block on our own code, TinyStories, fp16 + GradScaler on T4, checkpoint every ~30 min, Trackio. Our corrections to Hark: raw val loss is not comparable with TinyStories-33M (different tokenizer), so use bits per byte; nanochat runs on 1 GPU too (8xH100 is only for the speedrun).
 
-## First action in the new session
-1. `git pull`, then `git status`.
-2. Look at the real minimind repo (https://github.com/jingyaogong/minimind, Apache-2.0) before planning: its layout, config, dataset links and training scripts. Do not plan from memory. Devansh also pointed out that Andrej's repos (nanoGPT, ng-video-lecture) are open to look things up in.
-3. Propose a Phase 1 plan and get a go before building. Suggested notebook split, in the same style as Phase 0 (a `build_p1_XX.py` generating each notebook, each one runnable top to bottom and ending with "Your turn"):
-   - P1-01 train a tokenizer (~6,400 tokens) and compare with GPT-2's BPE from P0-01
-   - P1-02 pretrain on a real dataset (GPU, Colab or Kaggle)
-   - P1-03 SFT (chat format)
-   - P1-04 LoRA
-   - P1-05 DPO, then GRPO
-   - evals along the way (lm-evaluation-harness is listed in `curriculum.md`)
+## Done
+- **P1-01 tokenizer** (`build_p1_01.py`, `tokenizers/tinystories-4k.json`): 4,096 vocab gives 3.97 chars/token vs GPT-2's 4.06 on TinyStories val, with 12x fewer tokens.
+- **P1-02 modern block** (`build_p1_02.py`, `src/mymind.py`): RMSNorm, RoPE, SwiGLU, GQA, QK-norm, KV cache. minimind-3 weights in our MindModel are bit-exact against HF Qwen3ForCausalLM.
+- Both notebooks were executed in a scratch copy on CPU; their outputs are recorded in their lab notes.
 
-## Rules and preferences to keep
-- **No paid compute run without an explicit go from Devansh.** Colab Pro (Google AI Pro) or Kaggle T4x2 (fp16, no bf16). State a time estimate before any GPU run, and say whether it is measured or a guess.
-- **Edit the build scripts, never the `.ipynb` files.** Committed notebooks have no outputs. Verify by executing a scratch copy (nbclient) and reading real outputs. In Phase 0 this caught wrong numbers in the notebook text more than once.
-- **Laptop is CPU only.** Use `.venv/Scripts/python`. Test notebooks in a small CPU quick mode (as P0-04b does) before pushing. Colab and Kaggle code paths were only tested in P0-04b, so expect to debug the first run.
-- **Devansh fills in `lab-notes/` himself.** Do not write his observations. Offer help when he asks.
-- **Teaching style that worked:** short, plain prose with no em-dash filler. Explain with tables, using real numbers from his runs, and keep the "Your turn" exercises. He learns by watching Andrej's video alongside and by playing with visuals, so interactive HTML explainers helped (for example `explainers/neural-net-lab.html`).
-- **Report faithfully:** if a result is surprising or a notebook fails, say so with the output.
-- Keep Trackio logging (`embed=False` on Colab, because the embedded dashboard does not survive a downloaded notebook). Save any comparison chart as a PNG.
-- Big files (`*.pt`, `*.safetensors`, `*.gguf`, `checkpoints/`) stay out of git.
+## Next: P1-03 data pipeline, then P1-04 pretrain
+- P1-03: download the full TinyStoriesV2-GPT4-train.txt (2.2 GB) and tokenize it with tokenizers/tinystories-4k.json (`encode_batch`, fast). Append `<|endoftext|>` (id 0) after every story. Write uint16 `.bin` files (vocab < 65,536) plus val, and load them with np.memmap and random windows (like nanoGPT). Report the total token count (expect ~550M from 3.97 chars/token; not measured).
+- P1-04: MindModel `{'vocab_size': 4096, 'context_length': 512, 'emb_dim': 384, 'n_layers': 8, 'n_heads': 6, 'n_kv_heads': 2, 'ffn_dim': None, ...}` = 15.9M params. Use AdamW with warmup + cosine, fp16 autocast + GradScaler on T4, Trackio with `embed=False`, and checkpoints `{'model','optimizer','config','history'}` to Drive / `/kaggle/working`. Include a CPU quick mode. Eval: val loss, bits per byte, fixed prompts.
+- Phase 1 notebooks import `mymind.py` with the same download-if-missing pattern as P1-02.
 
-## Open items (small, none blocking)
-- Uncommitted and Devansh's: the `lab-notes/P0-0X` edits, the executed P0-01 to P0-03 and P0-05 notebooks, `notebooks/the-verdict.txt` (downloaded data, safe to ignore or gitignore). Do not commit these without asking.
-- `.gitignore` and `CLAUDE.md` have local edits (`explainers/` ignored, the P0-04b baseline added). They are fine to commit with the next push.
-- The P0-01 markdown still says the tokenizer learns "whole phrases (`hat `, `in the `)". That overstates it; only a few real phrases form. Reword it in `build_p0_01.py` when convenient.
-- Optional P0-05b (not built): GPT-2 medium vs 124M, plus fine-tuning GPT-2 on Tiny Shakespeare against the from-scratch 304k model. Only if Devansh asks.
-- Optional P0-04 cell showing one prediction being nudged step by step (code is in the session transcript, not built).
-- `explainers/` (gitignored, local only): `neural-net-lab.html` and `Q-and-A-phase-0.md` (his questions with corrected answers).
-- Cleanup: about 550 MB of GPT-2 weights in `~/.cache/huggingface` and `notebooks/gpt2.safetensors` can be deleted.
+## Rules (unchanged)
+- No paid compute without an explicit go. State a time estimate before any GPU run and say whether it is measured or a guess.
+- Edit build scripts, never the `.ipynb`. Verify by executing a scratch copy and reading the real outputs.
+- Devansh fills in "What I observed" in lab notes himself.
+- Uncommitted and his: the P0 lab-note edits, the executed P0 notebooks, and `notebooks/the-verdict.txt`. Do not commit these without asking.
+- Open small items from Phase 0: the P0-01 "whole phrases" wording, optional P0-05b, and cleaning up the GPT-2 weights cache. The minimind-3 download adds 128 MB to `~/.cache/huggingface`.

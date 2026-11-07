@@ -11,3 +11,5 @@ checkpoints/
 .venv/
 _old_local_backup/
 explainers/
+notebooks/data/
+notebooks/*.png
