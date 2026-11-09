@@ -15,8 +15,10 @@ Updated 2026-11-07. Read `CLAUDE.md` and the brain index (`C:\Users\agraw\Harnes
 - **P1-02 modern block** (`build_p1_02.py`, `src/mymind.py`): RMSNorm, RoPE, SwiGLU, GQA, QK-norm, KV cache. minimind-3 weights in our MindModel are bit-exact against HF Qwen3ForCausalLM.
 - Both notebooks were executed in a scratch copy on CPU; their outputs are recorded in their lab notes.
 
-## Next: P1-03 data pipeline, then P1-04 pretrain
-- P1-03: download the full TinyStoriesV2-GPT4-train.txt (2.2 GB) and tokenize it with tokenizers/tinystories-4k.json (`encode_batch`, fast). Append `<|endoftext|>` (id 0) after every story. Write uint16 `.bin` files (vocab < 65,536) plus val, and load them with np.memmap and random windows (like nanoGPT). Report the total token count (expect ~550M from 3.97 chars/token; not measured).
+## Done too: P1-03 data pipeline (2026-11-09)
+`build_p1_03.py`: full TinyStoriesV2-GPT4 tokenized once: 552,589,195 train tokens, 5,578,628 val tokens, 3.98 bytes per token (saved to data/ts_meta.json for bits per byte). Tokenizing took 631-730 s on the laptop; the download is flaky (one 2 GB attempt was reset at 1.09 GB), so `fetch` resumes. Measured on this laptop: training the 15.9M model runs at about 1,350 tokens/s on CPU, so the real P1-04 run needs a GPU (a T4 speed of 30-60k tokens/s is still a guess, measure it first). Chinchilla for 15.9M = 318M tokens = 0.58 of the file. On Colab/Kaggle P1-04 must re-run the P1-03 prep (about 1 GB output; Kaggle does not keep files between sessions, so consider saving the .bin as a Kaggle dataset).
+
+## Next: P1-04 pretrain
 - P1-04: MindModel `{'vocab_size': 4096, 'context_length': 512, 'emb_dim': 384, 'n_layers': 8, 'n_heads': 6, 'n_kv_heads': 2, 'ffn_dim': None, ...}` = 15.9M params. Use AdamW with warmup + cosine, fp16 autocast + GradScaler on T4, Trackio with `embed=False`, and checkpoints `{'model','optimizer','config','history'}` to Drive / `/kaggle/working`. Include a CPU quick mode. Eval: val loss, bits per byte, fixed prompts.
 - Phase 1 notebooks import `mymind.py` with the same download-if-missing pattern as P1-02.
 

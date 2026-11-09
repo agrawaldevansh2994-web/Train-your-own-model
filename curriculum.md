@@ -13,7 +13,7 @@ Total estimate (see costs.md): lean path ~₹700-2,300 (~$8-24); full path with 
 
 ## Status
 - [x] P0-01 tokenizer  - [x] P0-02 attention  - [x] P0-03 GPT block + generate  - [x] P0-04 pretrain tiny GPT (+ P0-04b more data)  - [x] P0-05 load GPT-2 weights
-- [x] P1-01 tokenizer  - [x] P1-02 modern block  - [ ] P1-03 data pipeline (next, see HANDOFF.md)  - [ ] P1 pretrain  - [ ] P1 SFT  - [ ] P1 LoRA  - [ ] P1 DPO/RL
+- [x] P1-01 tokenizer  - [x] P1-02 modern block  - [x] P1-03 data pipeline  - [ ] P1-04 pretrain TinyStories (next, see HANDOFF.md)  - [ ] P1 pretrain  - [ ] P1 SFT  - [ ] P1 LoRA  - [ ] P1 DPO/RL
 - [ ] P2 choose mini vs full  - [ ] P2 run  - [ ] P2 evals
 - [ ] P3 dataset  - [ ] P3 QLoRA  - [ ] P3 GGUF + Ollama
 - [ ] P4 tools  - [ ] P4 API  - [ ] P4 deploy
