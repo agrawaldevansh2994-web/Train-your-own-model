@@ -25,7 +25,8 @@ Updated 2026-11-07. Read `CLAUDE.md` and the brain index (`C:\Users\agraw\Harnes
 - **P1-05 eval:** bits per byte vs roneneldan/TinyStories-1M/8M/33M on the same val stories (only stories that fit in 512 tokens), loss by position, probes, side-by-side stories. The first CPU run hit a bug (append needed a tuple); it is fixed but **not yet rerun**: rerun it in scratch on the run4 checkpoint before committing.
 - **P1-06 SFT:** TinyStories-Instruct parsed into chat-format instructions, loss on answer tokens only, "uses all required words" score. CPU test: answer loss 4.07 -> 3.84, word score 0% -> 0% (base saw only 1M tokens; meaningful only after the GPU run).
 - **P1-07 LoRA:** hand-written LoRALinear on all 7 matrices, r=8: 471,040 trainable (2.9%), adapter 1.9 MB, merged vs LoRA max diff 4.8e-06. CPU: answer loss 3.95 (full SFT 3.84).
-- **Next:** rerun P1-05 when the laptop is free; P1-08 = one short notebook with DPO and GRPO, both judged by the word score; then Phase 3. The P1-04 GPU run needs Devansh's go (free Kaggle T4, but state the measured time first).
+- **Next session (Devansh, 2026-11-18): build, but do NOT run.** Write the next notebooks (P1-08) without executing them; all CPU test runs (P1-05 rerun, P1-08 test) wait until Devansh says the laptop is free. Uncommitted test outputs and the run4 checkpoint live in the session scratchpad and may be gone; recreate them with a P1-04 CPU run (about 20 min) when allowed.
+- **Then:** rerun P1-05 when the laptop is free; P1-08 = one short notebook with DPO and GRPO, both judged by the word score; then Phase 3. The P1-04 GPU run needs Devansh's go (free Kaggle T4, but state the measured time first).
 
 ## Rules (unchanged)
 - **This repo is public.** Phase 3's real target (fine-tuning on Devansh's private judgment data) lives in a separate private repo, later. Never put private data, quotes from it, or weights trained on it here. Describe methods only. Nothing to do about this until Phase 3.
